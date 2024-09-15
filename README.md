@@ -2,6 +2,10 @@
 
 An inspector plugin for the [Godot](https://godotengine.org/) game engine.
 
+<p align="center">
+    <img src="icon.png" alt="Plugin Icon">
+</p>
+
 ## Overview
 Adds a new [property hint](https://docs.godotengine.org/en/stable/tutorials/scripting/c_sharp/c_sharp_exports.html#doc-c-sharp-exports) for the `[Export]` annotation. This annotation adds the ability to select a file in the editor and populate the `[Export]` property with the resource's [UID](https://docs.godotengine.org/en/stable/classes/class_resourceuid.html). Below the populated `uid://` is a button that selects the corresponding resource in the Godot file system. 
 
