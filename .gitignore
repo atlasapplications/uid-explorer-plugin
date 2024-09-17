@@ -1,0 +1,5 @@
+# Godot Specific
+.godot/
+
+# macOS Specific
+.DS_Store

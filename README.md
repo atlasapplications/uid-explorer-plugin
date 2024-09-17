@@ -40,7 +40,7 @@ So `UID`s are just better?
 
 Not in every way. Unlike file paths, `UID`s aren't human readable in the same way. For example, when you see a file path that says `res://my_data/MyResource.tres` you can figure out the location and what the resource is by just looking at it. You can't tell either with `UID`s because they look like this: `uid://1234567`. Where is that file located? What resource is it referring to? Without cross referencing the `UID` in some code editor there's no easy way to know.
 
-Until *now*! With this plugin, `UID`s populated in the inspector will convert the file `UID` to its corresponding file path. It's based off the `UID` so it's just a utility to make `UID`s a bit more human readable. On top of that, the button below will navgiate the file system to the exact location of the resource the `UID` references, which is quite helpful when referencing file paths in general.
+Until *now*! With this plugin, `UID`s populated in the inspector will convert the file `UID` to its corresponding file path. It's based off the `UID` so it's just a utility to make `UID`s a bit more human readable. On top of that, the button below will navigate the file system to the exact location of the resource the `UID` references, which is quite helpful when referencing file paths in general.
 
 Although Godot's documentation isn't explicit about this, `UID`s are often interchangeable with traditional file paths (`res://`). That means when using methods like `GD.Load()` or `ResourceLoader.Load()` either `res://` or `uid://` based paths work the same.
 
