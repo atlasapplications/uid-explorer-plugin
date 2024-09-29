@@ -35,6 +35,7 @@ namespace UidExplorerPluginProject;
 
 public partial class UidInspectorProperty : EditorProperty
 {
+	private readonly UidInspector uidInspector;
 	private readonly EditorInterface editor;
 
 	private readonly VBoxContainer outerContainer;
@@ -52,8 +53,12 @@ public partial class UidInspectorProperty : EditorProperty
 	private string currentFullPath = "";
 	private bool updating = false;
 
-	public UidInspectorProperty()
+	public UidInspectorProperty() {  }
+
+	public UidInspectorProperty(UidInspector uidInspector)
 	{
+		this.uidInspector = uidInspector;
+
 		editor = EditorInterface.Singleton;
 
 		outerContainer = new VBoxContainer();
@@ -149,6 +154,10 @@ public partial class UidInspectorProperty : EditorProperty
 		{
 			findUidWindow.CurrentPath = validatedPath;
 		}
+		else if (uidInspector.LastEditedPath != "")
+		{
+			findUidWindow.CurrentPath = uidInspector.LastEditedPath;
+		}
 
 		findUidWindow.CloseRequested += OnDialogWindowCloseRequested;
 		findUidWindow.FileSelected += OnDialogWindowFileSelected;
@@ -200,7 +209,10 @@ public partial class UidInspectorProperty : EditorProperty
 			return;
 		}
 
-		uidTextEdit.Text = ResourceUid.IdToText(foundUid);
+		string foundUidPath = ResourceUid.IdToText(foundUid);
+		uidTextEdit.Text = foundUidPath;
+		uidInspector.SetLastEditedPath(fileSelected);
+
 		PerformPropertyChange();
 		RefreshPaths();
 	}

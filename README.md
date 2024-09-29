@@ -3,7 +3,7 @@
 An inspector plugin for the [Godot](https://godotengine.org/) game engine.
 
 <p align="center">
-    <img src="icon.png" alt="Plugin Icon">
+    <img src="images/icon_horizontal.png" alt="Plugin Icon">
 </p>
 
 ## Overview

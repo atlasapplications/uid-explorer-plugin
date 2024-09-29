@@ -36,8 +36,15 @@ namespace UidExplorerPluginProject;
 
 public partial class UidInspector : EditorInspectorPlugin
 {
+	public string LastEditedPath 
+	{
+		get => lastEditedPath;
+	}
+
 	private const string UID_HINT_FILTER = "uid";
 	private readonly List<UidInspectorProperty> addedInspectorProperties = new();
+
+	private string lastEditedPath = "";
 
 	public override bool _CanHandle(GodotObject godotObject)
 	{
@@ -52,11 +59,16 @@ public partial class UidInspector : EditorInspectorPlugin
 			return false;
 		}
 
-		UidInspectorProperty inspectorProperty = new();
+		UidInspectorProperty inspectorProperty = new(this);
 		addedInspectorProperties.Add(inspectorProperty);
 		AddPropertyEditor(name, inspectorProperty);
 		
 		return true;
+	}
+
+	public void SetLastEditedPath(string lastEditedPath)
+	{
+		this.lastEditedPath = lastEditedPath;
 	}
 }
 
