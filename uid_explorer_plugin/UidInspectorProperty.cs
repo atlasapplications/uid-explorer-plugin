@@ -35,86 +35,124 @@ namespace UidExplorerPluginProject;
 
 public partial class UidInspectorProperty : EditorProperty
 {
+	[Signal]
+	public delegate void UnpackCompletedEventHandler(UidInspectorProperty uidInspectorProperty);
+
+	private static readonly string[] FILE_FILTER_TYPES = { "*.tscn", "*.tres", "*.gdshader", "*.png", "*.tga", "*.wav" };
+
+	private bool devModeEnabled;
+	private PressOptionE pressOption;
+
 	private readonly UidInspector uidInspector;
 	private readonly EditorInterface editor;
 
-	private readonly VBoxContainer outerContainer;
-	private readonly HBoxContainer topContainer;
-	private readonly HBoxContainer bottomContainer;
+	private VBoxContainer outerContainer;
+	private HBoxContainer topContainer;
+	private HBoxContainer bottomContainer;
 
-	private readonly LineEdit uidTextEdit;
-	private readonly Button findUidButton;
-	private readonly Button convertedPathButton;
-	private readonly Button selectButton;
+	private LineEdit uidTextEdit;
+	private Button chooseButton;
+	private Button showButton;
+	private Button convertedPathButton;
 
 	private FileDialog findUidWindow;
-	private bool findUidWindowConnected = false;
 
 	private string currentFullPath = "";
 	private bool updating = false;
 
-	public UidInspectorProperty() {  }
+	private bool alreadyUnpacked = false;
+	private bool parentUnpacked = false;
 
-	public UidInspectorProperty(UidInspector uidInspector)
+	private ValidationFailCodeE validationFailCode = ValidationFailCodeE.Ok;
+
+	public UidInspectorProperty() {  }
+	public UidInspectorProperty(UidInspector uidInspector, bool devModeEnabled, PressOptionE pressOption)
 	{
 		this.uidInspector = uidInspector;
 
+		UpdateSettings(devModeEnabled, pressOption);
+
 		editor = EditorInterface.Singleton;
 
+		ConstructControl();
+
+		showButton.Connect(Button.SignalName.Pressed, new(this, MethodName.OnSelectButtonPressed));
+		chooseButton.Connect(Button.SignalName.Pressed, new(this, MethodName.OnFindUidButtonPressed));
+		convertedPathButton.Connect(Button.SignalName.Pressed, new(this, MethodName.OnConvertedPathButtonPressed));
+		uidTextEdit.Connect(LineEdit.SignalName.TextChanged, new(this, MethodName.OnUidTextEditChanged));
+		uidTextEdit.Connect(LineEdit.SignalName.TextSubmitted, new(this, MethodName.OnUidTextEditSubmitted));
+
+		RefreshPaths();
+	}
+	private void ConstructControl()
+	{
 		outerContainer = new VBoxContainer();
 		topContainer = new HBoxContainer();
 		bottomContainer = new HBoxContainer();
 
 		uidTextEdit = new LineEdit();
-		findUidButton = new Button();
+		chooseButton = new Button();
 		convertedPathButton = new Button();
-		selectButton = new Button();
+		showButton = new Button();
 
 		AddChild(outerContainer);
 		outerContainer.AddChild(topContainer);
 		outerContainer.AddChild(bottomContainer);
 		topContainer.AddChild(uidTextEdit);
-		topContainer.AddChild(findUidButton);
+		topContainer.AddChild(chooseButton);
+		topContainer.AddChild(showButton);
 		bottomContainer.AddChild(convertedPathButton);
-		bottomContainer.AddChild(selectButton);
 
 		AddFocusable(uidTextEdit);
-		AddFocusable(findUidButton);
+		AddFocusable(chooseButton);
 		AddFocusable(convertedPathButton);
-		AddFocusable(selectButton);
+		AddFocusable(showButton);
 
 		uidTextEdit.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 		uidTextEdit.SizeFlagsVertical = SizeFlags.ExpandFill;
-		selectButton.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-		selectButton.SizeFlagsVertical = SizeFlags.ExpandFill;
-		findUidButton.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-		findUidButton.SizeFlagsVertical = SizeFlags.ExpandFill;
+		showButton.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		showButton.SizeFlagsVertical = SizeFlags.ExpandFill;
+		chooseButton.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		chooseButton.SizeFlagsVertical = SizeFlags.ExpandFill;
 		convertedPathButton.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 		convertedPathButton.SizeFlagsVertical = SizeFlags.ExpandFill;
 
-		//uidTextEdit.SizeFlagsStretchRatio = 0.1f;
-		//selectButton.SizeFlagsStretchRatio = 0.9f;
+		uidTextEdit.SizeFlagsStretchRatio = 0.47f;
+		showButton.SizeFlagsStretchRatio = 0.265f;
+		chooseButton.SizeFlagsStretchRatio = 0.265f;
+
+		uidTextEdit.ClipContents = true;
+		showButton.ClipText = true;
+		chooseButton.ClipText = true;
+		convertedPathButton.ClipText = true;
 
 		uidTextEdit.PlaceholderText = "uid://";
-		findUidButton.Text = "Select";
-		selectButton.Text = "File System";
-		//convertedPathButton.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-
-		selectButton.Pressed += OnSelectButtonPressed;
-		findUidButton.Pressed += OnFindUidButtonPressed;
-		convertedPathButton.Pressed += OnConvertedPathButtonPressed;
-		uidTextEdit.TextChanged += OnUidTextEditChanged;
-		uidTextEdit.TextSubmitted += OnUidTextEditSubmitted;
+		chooseButton.Text = "Choose";
+		showButton.Text = "Show";
 	}
-	~UidInspectorProperty()
+    public override void _ExitTree()
+    {
+		Unpack();
+    }
+	private void Unpack()
 	{
-		selectButton.Pressed -= OnSelectButtonPressed;
-		findUidButton.Pressed -= OnFindUidButtonPressed;
-		convertedPathButton.Pressed -= OnConvertedPathButtonPressed;
-		uidTextEdit.TextChanged -= OnUidTextEditChanged;
-		uidTextEdit.TextSubmitted -= OnUidTextEditSubmitted;
-	}
+		if (alreadyUnpacked)
+		{
+			return;
+		}
 
+		alreadyUnpacked = true;
+
+		if (!parentUnpacked)
+		{
+			EmitSignal(SignalName.UnpackCompleted, this);
+		}
+	}
+	public void UpdateSettings(bool devModeEnabled, PressOptionE pressOption)
+	{
+		this.devModeEnabled = devModeEnabled;
+		this.pressOption = pressOption;
+	}
 	private void OnSelectButtonPressed()
 	{
 		if (updating)
@@ -129,9 +167,39 @@ public partial class UidInspectorProperty : EditorProperty
 			return;
 		}
 
-		editor.SelectFile(validatedPath);
-		//Resource foundResource = ResourceLoader.Load(foundPath);
-		//editor.InspectObject(foundResource);
+		string[] selectedFiles = editor.GetSelectedPaths();
+		bool isSelectedAlready;
+
+		if (selectedFiles.Length == 1)
+		{
+			if (selectedFiles[0] == validatedPath)
+			{
+				isSelectedAlready = true;
+			}
+			else 
+			{
+				isSelectedAlready = false;
+			}
+		}
+		else 
+		{
+			isSelectedAlready = false;
+		}
+
+		if (isSelectedAlready)
+		{
+			// -- New Feature Roadmap --
+			// When this button is hit twice, edit the resource with
+			// a new window. This doesn't appear to be supported 
+			// out of the box as of 4.4.1.
+
+			// This... but a new window.
+			//editor.EditResource(ResourceLoader.Load(validatedPath));
+		}
+		else 
+		{
+			editor.SelectFile(validatedPath);
+		}
 	}
 	private void OnFindUidButtonPressed()
 	{
@@ -146,7 +214,7 @@ public partial class UidInspectorProperty : EditorProperty
 		findUidWindow.Title = "Choose Resource";
 		findUidWindow.FileMode = FileDialog.FileModeEnum.OpenFile;
 		findUidWindow.Access = FileDialog.AccessEnum.Resources;
-		findUidWindow.Filters = new string[] { "*.tscn", "*.tres" };
+		findUidWindow.Filters = FILE_FILTER_TYPES;
 
 		string validatedPath = ValidateUidPath();
 
@@ -159,19 +227,42 @@ public partial class UidInspectorProperty : EditorProperty
 			findUidWindow.CurrentPath = uidInspector.LastEditedPath;
 		}
 
-		findUidWindow.CloseRequested += OnDialogWindowCloseRequested;
-		findUidWindow.FileSelected += OnDialogWindowFileSelected;
-		findUidWindowConnected = true;
+		findUidWindow.Connect(FileDialog.SignalName.CloseRequested, new(this, MethodName.OnDialogWindowCloseRequested));
+		findUidWindow.Connect(FileDialog.SignalName.FileSelected, new(this, MethodName.OnDialogWindowFileSelected));
+
 		editor.PopupDialogCentered(findUidWindow, new Vector2I(displaySize.X / 2, displaySize.Y / 2));
 	}
-	private void OnConvertedPathButtonPressed()
+	private async void OnConvertedPathButtonPressed()
 	{
 		if (updating)
 		{
 			return;
 		}
 
-		GD.Print("Full path: " + currentFullPath);
+		if (pressOption == PressOptionE.EditResource)
+		{
+			string validatedPath = ValidateUidPath();
+
+			if (validatedPath == null)
+			{
+				return;
+			}
+
+			uidInspector.ManualUnpack(this);
+			parentUnpacked = true;
+
+			Unpack();
+
+			// Hacky, but unfortunately I'm not sure a better way to ensure that the signal
+			// in unpack is emitted because without this an error occurs every time.
+			await ToSignal(GetTree().CreateTimer(0.1f), SceneTreeTimer.SignalName.Timeout);
+
+			editor.EditResource(ResourceLoader.Load(validatedPath));
+		}
+		else if (pressOption == PressOptionE.ShowFullPath)
+		{
+			GD.Print("Path: " + currentFullPath);
+		}
 	}
 	private void OnUidTextEditChanged(string newText)
 	{
@@ -191,7 +282,7 @@ public partial class UidInspectorProperty : EditorProperty
 		}
 
 		PerformPropertyChange();
-		RefreshPaths(true);
+		RefreshPaths();
 	}
 	
 	private void OnDialogWindowCloseRequested()
@@ -231,60 +322,73 @@ public partial class UidInspectorProperty : EditorProperty
 		RefreshPaths();
 		updating = false;
 	}
-	public override string _GetTooltip(Vector2 atPosition)
-    {
-		//return currentFullPath;
-		return "";
-    }
-	private void RefreshPaths(bool debug = false)
+	private void RefreshPaths()
 	{
-		string validatedPath = ValidateUidPath(debug);
+		string validatedPath = ValidateUidPath();
 
 		if (validatedPath != null)
 		{
 			currentFullPath = validatedPath;
-			int uidCount = uidTextEdit.Text.Length;
 
-			if (currentFullPath.Length > uidCount)
+			const int MAX_PATH_LENGTH = 40;
+
+			if (currentFullPath.Length > MAX_PATH_LENGTH)
 			{
-				convertedPathButton.Text = validatedPath.Remove(0, validatedPath.Length - uidCount);
+				convertedPathButton.Text = validatedPath.Remove(0, validatedPath.Length - MAX_PATH_LENGTH);
 			}
 			else 
 			{
 				convertedPathButton.Text = validatedPath;
 			}
 
-			//convertedPathButton.Text = validatedPath;
-
 			convertedPathButton.Disabled = false;
-			selectButton.Disabled = false;
+			showButton.Disabled = false;
 		}
 		else 
 		{
-			convertedPathButton.Text = "No Resource Found";
+			switch (validationFailCode)
+			{
+				case ValidationFailCodeE.InvalidUid:
+					convertedPathButton.Text = "Invalid UID";
+					break;
+				case ValidationFailCodeE.IsEmpty:
+					convertedPathButton.Text = "No Path Given";
+					break;
+				case ValidationFailCodeE.IsNull:
+					convertedPathButton.Text = "String is Null";
+					break;
+				case ValidationFailCodeE.NoResourceFound:
+					convertedPathButton.Text = "No Resource Found";
+					break;
+				default:
+					convertedPathButton.Text = "Unhandled Fail Code";
+					break;
+			}
 
 			convertedPathButton.Disabled = true;
-			selectButton.Disabled = true;
+			showButton.Disabled = true;
 		}
 	}
-
-	private string ValidateUidPath(bool debug = false)
+	private string ValidateUidPath()
 	{
 		string foundPath = uidTextEdit.Text;
 
 		if (foundPath == null)
 		{
-			if (debug) GD.Print("Path is null.");
+			if (devModeEnabled) GD.Print("Path is null.");
+			validationFailCode = ValidationFailCodeE.IsNull;
 			return null;
 		}
 		else if (foundPath == "")
 		{
-			if (debug) GD.Print("Path is empty.");
+			if (devModeEnabled) GD.Print("Path is empty.");
+			validationFailCode = ValidationFailCodeE.IsEmpty;
 			return null;
 		}
 		else if (!ResourceLoader.Exists(foundPath))
 		{
-			if (debug) GD.Print($"Resource doesn't exist at path: {foundPath}.");
+			if (devModeEnabled) GD.Print($"Resource doesn't exist at path: {foundPath}.");
+			validationFailCode = ValidationFailCodeE.NoResourceFound;
 			return null;
 		}
 
@@ -292,10 +396,12 @@ public partial class UidInspectorProperty : EditorProperty
 
 		if (uidValue == -1 || !ResourceUid.HasId(uidValue))
 		{
-			if (debug) GD.Print("Invalid UID given.");
+			if (devModeEnabled) GD.Print("Invalid UID given.");
+			validationFailCode = ValidationFailCodeE.InvalidUid;
 			return null;
 		}
 
+		validationFailCode = ValidationFailCodeE.Ok;
 		return ResourceUid.GetIdPath(uidValue);
 	}
     private void PerformPropertyChange()
@@ -306,16 +412,18 @@ public partial class UidInspectorProperty : EditorProperty
 	{
 		if (findUidWindow != null && IsInstanceValid(findUidWindow))
 		{
-			if (findUidWindowConnected)
-			{
-				findUidWindow.CloseRequested -= OnDialogWindowCloseRequested;
-				findUidWindow.FileSelected -= OnDialogWindowFileSelected;
-				findUidWindowConnected = false;
-			}
-
 			findUidWindow.QueueFree();
 			findUidWindow = null;
 		}
+	}
+
+	public enum ValidationFailCodeE
+	{
+		Ok = -1,
+		IsNull,
+		IsEmpty,
+		NoResourceFound,
+		InvalidUid
 	}
 }
 

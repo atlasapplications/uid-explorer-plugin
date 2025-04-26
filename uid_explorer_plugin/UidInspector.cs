@@ -42,9 +42,53 @@ public partial class UidInspector : EditorInspectorPlugin
 	}
 
 	private const string UID_HINT_FILTER = "uid";
-	private readonly List<UidInspectorProperty> addedInspectorProperties = new();
+
+	// Project Settings
+	private bool devModeEnabled;
+	private PressOptionE pressOption;
+
+	private readonly Dictionary<ulong, UidInspectorProperty> addedInspectorProperties = new();
 
 	private string lastEditedPath = "";
+
+	public UidInspector() {  }
+	public UidInspector(bool devMode, PressOptionE pressOption)
+	{
+		UpdateSettings(devMode, pressOption);
+	}
+
+	public void UpdateSettings(bool devModeEnabled, PressOptionE pressOption)
+	{
+		this.devModeEnabled = devModeEnabled;
+		this.pressOption = pressOption;
+
+		foreach (KeyValuePair<ulong, UidInspectorProperty> item in addedInspectorProperties)
+		{
+			UidInspectorProperty foundProperty = item.Value;
+
+			if (!IsInstanceValid(foundProperty))
+			{
+				if (devModeEnabled) GD.PrintErr("UidInspector>UpdateSettings>property was no longer valid.");
+				addedInspectorProperties.Remove(item.Key);
+				continue;
+			}
+
+			foundProperty.UpdateSettings(devModeEnabled, pressOption);
+		}
+	}
+	private void OnUnpackCompleted(UidInspectorProperty uidInspectorProperty)
+	{
+		if (!IsInstanceValid(uidInspectorProperty))
+		{
+			return;
+		}
+
+		ManualUnpack(uidInspectorProperty);
+	}
+	public void ManualUnpack(UidInspectorProperty uidInspectorProperty)
+	{
+		addedInspectorProperties.Remove(uidInspectorProperty.GetInstanceId());
+	}
 
 	public override bool _CanHandle(GodotObject godotObject)
 	{
@@ -59,8 +103,9 @@ public partial class UidInspector : EditorInspectorPlugin
 			return false;
 		}
 
-		UidInspectorProperty inspectorProperty = new(this);
-		addedInspectorProperties.Add(inspectorProperty);
+		UidInspectorProperty inspectorProperty = new(this, devModeEnabled, pressOption);
+		addedInspectorProperties.Add(inspectorProperty.GetInstanceId(), inspectorProperty);
+		inspectorProperty.Connect(UidInspectorProperty.SignalName.UnpackCompleted, new(this, MethodName.OnUnpackCompleted));
 		AddPropertyEditor(name, inspectorProperty);
 		
 		return true;
