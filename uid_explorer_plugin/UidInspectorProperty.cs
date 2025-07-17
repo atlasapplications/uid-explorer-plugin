@@ -117,6 +117,15 @@ public partial class UidInspectorProperty : EditorProperty
 		convertedPathButton.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 		convertedPathButton.SizeFlagsVertical = SizeFlags.ExpandFill;
 
+		// Enable drag and drop to pass through all child elements
+		uidTextEdit.MouseFilter = Control.MouseFilterEnum.Pass;
+		chooseButton.MouseFilter = Control.MouseFilterEnum.Pass;
+		showButton.MouseFilter = Control.MouseFilterEnum.Pass;
+		convertedPathButton.MouseFilter = Control.MouseFilterEnum.Pass;
+		topContainer.MouseFilter = Control.MouseFilterEnum.Pass;
+		bottomContainer.MouseFilter = Control.MouseFilterEnum.Pass;
+		outerContainer.MouseFilter = Control.MouseFilterEnum.Pass;
+
 		uidTextEdit.SizeFlagsStretchRatio = 0.47f;
 		showButton.SizeFlagsStretchRatio = 0.265f;
 		chooseButton.SizeFlagsStretchRatio = 0.265f;
@@ -199,6 +208,51 @@ public partial class UidInspectorProperty : EditorProperty
 		else 
 		{
 			editor.SelectFile(validatedPath);
+		}
+	}
+
+	public override bool _CanDropData(Vector2 position, Variant data)
+	{
+		// Check if the dropped data contains files
+		if (data.VariantType == Variant.Type.Dictionary)
+		{
+			var dict = data.AsGodotDictionary();
+			return dict.ContainsKey("type") && dict["type"].AsString() == "files";
+		}
+		return false;
+	}
+
+	public override void _DropData(Vector2 position, Variant data)
+	{
+		if (updating)
+		{
+			return;
+		}
+
+		if (data.VariantType == Variant.Type.Dictionary)
+		{
+			var dict = data.AsGodotDictionary();
+			if (dict.ContainsKey("files"))
+			{
+				var files = dict["files"].AsStringArray();
+				
+				// Use the first dropped file
+				if (files.Length > 0)
+				{
+					string filePath = files[0];
+					long foundUid = ResourceLoader.GetResourceUid(filePath);
+					
+					if (foundUid != -1)
+					{
+						string foundUidPath = ResourceUid.IdToText(foundUid);
+						uidTextEdit.Text = foundUidPath;
+						uidInspector.SetLastEditedPath(filePath);
+						
+						PerformPropertyChange();
+						RefreshPaths();
+					}
+				}
+			}
 		}
 	}
 	private void OnFindUidButtonPressed()
