@@ -38,6 +38,9 @@ var my_resource: Resource = load(my_resource_path)
 2. Make sure to press the build button to compile `C#` assemblies.
 3. Enable in the plugins tab.
 
+## Additional Features
+1. Supports drag and drop support. Just drag the resource you want on the inspector and the UID will populate the correct field.
+
 ## What is this useful for?
 Recent Godot versions have improved UID support. Referencing files with an ID can be beneficial over using a traditional file path because when paths change, the original reference becomes outdated, and then things break. But for UIDs, they should stay the same regardless of the file location. 
 

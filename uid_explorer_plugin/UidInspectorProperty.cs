@@ -219,6 +219,7 @@ public partial class UidInspectorProperty : EditorProperty
 			var dict = data.AsGodotDictionary();
 			return dict.ContainsKey("type") && dict["type"].AsString() == "files";
 		}
+
 		return false;
 	}
 
@@ -232,6 +233,7 @@ public partial class UidInspectorProperty : EditorProperty
 		if (data.VariantType == Variant.Type.Dictionary)
 		{
 			var dict = data.AsGodotDictionary();
+			
 			if (dict.ContainsKey("files"))
 			{
 				var files = dict["files"].AsStringArray();
