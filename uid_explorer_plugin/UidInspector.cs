@@ -43,6 +43,8 @@ public partial class UidInspector : EditorInspectorPlugin
 
 	private const string UID_HINT_FILTER = "uid";
 
+	private readonly UidExplorerPlugin plugin;
+
 	// Project Settings
 	private bool devModeEnabled;
 	private PressOptionE pressOption;
@@ -52,9 +54,11 @@ public partial class UidInspector : EditorInspectorPlugin
 	private string lastEditedPath = "";
 
 	public UidInspector() {  }
-	public UidInspector(bool devMode, PressOptionE pressOption)
+	public UidInspector(UidExplorerPlugin plugin)
 	{
-		UpdateSettings(devMode, pressOption);
+		this.plugin = plugin;
+
+		UpdateSettings(plugin.DevModeEnabled, plugin.PressOption);
 	}
 
 	public void UpdateSettings(bool devModeEnabled, PressOptionE pressOption)
@@ -98,16 +102,24 @@ public partial class UidInspector : EditorInspectorPlugin
 	public override bool _ParseProperty(GodotObject godotObject, Variant.Type godotType, string name, 
 		PropertyHint hintType, string hintString, PropertyUsageFlags usageFlags, bool wide)
 	{
-		if (godotType != Variant.Type.String || hintType != PropertyHint.File || hintString != UID_HINT_FILTER)
+		if (hintType != PropertyHint.File || hintString != UID_HINT_FILTER)
 		{
 			return false;
 		}
 
-		UidInspectorProperty inspectorProperty = new(this, devModeEnabled, pressOption);
-		addedInspectorProperties.Add(inspectorProperty.GetInstanceId(), inspectorProperty);
-		inspectorProperty.Connect(UidInspectorProperty.SignalName.UnpackCompleted, new(this, MethodName.OnUnpackCompleted));
-		AddPropertyEditor(name, inspectorProperty);
-		
+		if (godotType == Variant.Type.String)
+        {
+            CreateInspectorProperty(name, false, null);
+        }
+		else if (godotType == Variant.Type.PackedStringArray)
+        {
+			CreateInspectorPropertyArray(name, godotType);
+        }
+		else
+        {
+            return false;
+        }
+
 		return true;
 	}
 
@@ -115,6 +127,43 @@ public partial class UidInspector : EditorInspectorPlugin
 	{
 		this.lastEditedPath = lastEditedPath;
 	}
+
+	public UidInspectorProperty CreateInspectorProperty(string name, bool partOfArray, Control differentParent)
+    {
+		UidInspectorProperty inspectorProperty = new(plugin, this, partOfArray, devModeEnabled, pressOption);
+		addedInspectorProperties.Add(inspectorProperty.GetInstanceId(), inspectorProperty);
+		inspectorProperty.Connect(UidInspectorProperty.SignalName.UnpackCompleted, new(this, MethodName.OnUnpackCompleted));
+
+		if (differentParent == null)
+        {
+			AddPropertyEditor(name, inspectorProperty);
+        }
+		else
+        {
+			differentParent.AddChild(inspectorProperty);
+        }
+
+		return inspectorProperty;
+    }
+
+	public bool RemoveInspectorProperty(ulong instanceId)
+    {
+        if (!addedInspectorProperties.TryGetValue(instanceId, out UidInspectorProperty foundProperty))
+        {
+			if (plugin.DevModeEnabled) GD.PrintErr($"UidInspector>RemoveInspectorProperty>ID: {instanceId}. Probably was removed already.");
+            return false;
+        }
+
+		foundProperty.QueueFree();
+		addedInspectorProperties.Remove(instanceId);
+		return true;
+    }
+
+	private void CreateInspectorPropertyArray(string name, Variant.Type godotType)
+    {
+		UidPropertyArray uidPropertyArray = new(plugin, this, name, godotType);
+		AddPropertyEditor(name, uidPropertyArray);
+    }
 }
 
 #endif

@@ -37,35 +37,56 @@ namespace UidExplorerPluginProject;
 [Tool]
 public partial class UidExplorerPlugin : EditorPlugin
 {
+	public int ArrayTabCount
+    {
+        get => arrayTabCount;
+    }
+	public PressOptionE PressOption
+    {
+        get => pressOption;
+    }
+	public bool DevModeEnabled
+    {
+        get => devModeEnabled;
+    }
+
 	// Plugin Settings
 	private const string SETTINGS_PATH = "addons/UidExplorerPlugin/";
-
+	private const string ARRAY_TAB_COUNT_PATH = SETTINGS_PATH + "ArrayTabCount";
+	private const int ARRAY_TAB_COUNT_DEFAULT = 10;
+	private const string PRESS_OPTION_PATH = SETTINGS_PATH + "PressOption";
+	private const PressOptionE PRESS_OPTION_DEFAULT = PressOptionE.EditResource;
 	private const string DEV_MODE_ENABLED_PATH = SETTINGS_PATH + "DevModeEnabled";
 	private const bool DEV_MODE_ENABLED_DEFAULT = false;
 
-	private const string PRESS_OPTION_PATH = SETTINGS_PATH + "PressOption";
-	private const PressOptionE PRESS_OPTION_DEFAULT = PressOptionE.EditResource;
-
-	private bool devModeEnabled;
+	private int arrayTabCount;
 	private PressOptionE pressOption;
-
+	private bool devModeEnabled;
+	
 	private UidInspector uidInspector;
+
+	private EditorInterface editor;
 
 	public override void _EnterTree()
 	{
+		editor = EditorInterface.Singleton;
 		CheckForSettings();
-		uidInspector = new UidInspector(devModeEnabled, pressOption);
+		uidInspector = new UidInspector(this);
 		AddInspectorPlugin(uidInspector);
+
 		ProjectSettings.Singleton.Connect(ProjectSettings.SignalName.SettingsChanged, new(this, MethodName.OnProjectSettingChanged));
 	}
+
 	public override void _ExitTree()
 	{
 		RemoveInspectorPlugin(uidInspector);
 		uidInspector = null;
 	}
+
 	private void OnProjectSettingChanged()
 	{
 		CheckForSettings();
+
 		uidInspector.UpdateSettings(devModeEnabled, pressOption);
 	}
 
@@ -74,16 +95,16 @@ public partial class UidExplorerPlugin : EditorPlugin
 	/// </summary>
 	private void CheckForSettings()
 	{
-		if (ProjectSettings.HasSetting(DEV_MODE_ENABLED_PATH))
-		{
-			devModeEnabled = ProjectSettings.GetSetting(DEV_MODE_ENABLED_PATH).As<bool>();
-		}
-		else 
-		{
-			ProjectSettings.SetSetting(DEV_MODE_ENABLED_PATH, DEV_MODE_ENABLED_DEFAULT);
-			ProjectSettings.SetInitialValue(DEV_MODE_ENABLED_PATH, DEV_MODE_ENABLED_DEFAULT);
-			devModeEnabled = DEV_MODE_ENABLED_DEFAULT;
-		}
+		if (ProjectSettings.HasSetting(ARRAY_TAB_COUNT_PATH))
+        {
+            arrayTabCount = ProjectSettings.GetSetting(ARRAY_TAB_COUNT_PATH).As<int>();
+        }
+		else
+        {
+            ProjectSettings.SetSetting(ARRAY_TAB_COUNT_PATH, ARRAY_TAB_COUNT_DEFAULT);
+			ProjectSettings.SetInitialValue(ARRAY_TAB_COUNT_PATH, ARRAY_TAB_COUNT_DEFAULT);
+			arrayTabCount = ARRAY_TAB_COUNT_DEFAULT;
+        }
 
 		if (ProjectSettings.HasSetting(PRESS_OPTION_PATH))
 		{
@@ -94,6 +115,17 @@ public partial class UidExplorerPlugin : EditorPlugin
 			ProjectSettings.SetSetting(PRESS_OPTION_PATH, (int)PRESS_OPTION_DEFAULT);
 			ProjectSettings.SetInitialValue(PRESS_OPTION_PATH, (int)PRESS_OPTION_DEFAULT);
 			pressOption = PRESS_OPTION_DEFAULT;
+		}
+
+		if (ProjectSettings.HasSetting(DEV_MODE_ENABLED_PATH))
+		{
+			devModeEnabled = ProjectSettings.GetSetting(DEV_MODE_ENABLED_PATH).As<bool>();
+		}
+		else 
+		{
+			ProjectSettings.SetSetting(DEV_MODE_ENABLED_PATH, DEV_MODE_ENABLED_DEFAULT);
+			ProjectSettings.SetInitialValue(DEV_MODE_ENABLED_PATH, DEV_MODE_ENABLED_DEFAULT);
+			devModeEnabled = DEV_MODE_ENABLED_DEFAULT;
 		}
 
 		ProjectSettings.AddPropertyInfo(GetPressOptionPropertyInfo());
