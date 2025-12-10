@@ -33,7 +33,7 @@ Resource myResource = ResourceLoader.Load(myResourcePath);
 private string[] multipleResourcePaths = Array.Empty<string>();
 ```
 Example: `GDScript`
-```javascript
+```gdscript
 @export_file("uid")
 var my_resource_path: String = ""
 

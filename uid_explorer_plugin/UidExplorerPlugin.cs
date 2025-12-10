@@ -53,7 +53,7 @@ public partial class UidExplorerPlugin : EditorPlugin
 	// Plugin Settings
 	private const string SETTINGS_PATH = "addons/UidExplorerPlugin/";
 	private const string ARRAY_TAB_COUNT_PATH = SETTINGS_PATH + "ArrayTabCount";
-	private const int ARRAY_TAB_COUNT_DEFAULT = 10;
+	public const int ARRAY_TAB_COUNT_DEFAULT = 10;
 	private const string PRESS_OPTION_PATH = SETTINGS_PATH + "PressOption";
 	private const PressOptionE PRESS_OPTION_DEFAULT = PressOptionE.EditResource;
 	private const string DEV_MODE_ENABLED_PATH = SETTINGS_PATH + "DevModeEnabled";

@@ -275,13 +275,19 @@ public partial class UidPropertyArray : EditorProperty
             }
         }
 
+		int arrayTabCount;
+
 		if (plugin == null || !IsInstanceValid(plugin))
         {
-			GD.PrintErr("UID Explorer Plugin>plugin is null (engine bug). Editor needs restart for plugin to work correctly. (Make sure to save first!)");
-			return;
-        }
+			//GD.PrintErr("UID Explorer Plugin>plugin is null (engine bug). Editor needs restart for plugin to work correctly. (Make sure to save first!)");
+			//return;
 
-		int arrayTabCount = plugin.ArrayTabCount;
+			arrayTabCount = UidExplorerPlugin.ARRAY_TAB_COUNT_DEFAULT;
+        }
+		else 
+		{
+			arrayTabCount = plugin.ArrayTabCount;
+		}
 
 		double nextCreatedTabCountFloating = (double)currentlyCachedPropertyValues.Count / (double)arrayTabCount;
 		
