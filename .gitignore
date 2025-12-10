@@ -1,5 +1,16 @@
-# Godot Specific
+# Godot-specific
 .godot/
+.import/
+export.cfg
+export_presets.cfg
 
-# macOS Specific
+# Imported translations
+*.translation
+
+# .NET-specific
+.mono/
+data_*/
+mono_crash.*.json
+
+# macOS-specific
 .DS_Store
